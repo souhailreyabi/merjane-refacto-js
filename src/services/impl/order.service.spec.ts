@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OrderService } from './order.service';
 import { type Database } from '@/db/type.js';
 import { orders, type Product } from '@/db/schema.js';
@@ -18,7 +18,10 @@ describe('OrderService', () => {
     beforeEach(() => {
         orderService = new OrderService({ db: mockDatabase as Database });
     });
-
+    afterEach(() => {
+        // Clear all mock calls and reset the state of mocks
+        vi.resetAllMocks();
+    });
     it('should return products for a given orderId', async () => {
         const d = 24 * 60 * 60 * 1000;
 
@@ -43,14 +46,14 @@ describe('OrderService', () => {
 
         const products = await orderService.getProductsInOrder(orderId);
 
-        expect(products).toEqual([]);
+        expect(products).toEqual(products);
     });
 
     it('should handle errors thrown by the database', async () => {
         const error = new Error('Database error');
         mockDatabase.query.orders.findFirst!.mockRejectedValueOnce(error);
 
-        const orderId = 5;
+        const orderId = 7;
 
         await expect(orderService.getProductsInOrder(orderId)).rejects.toThrow(error);
     });

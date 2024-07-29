@@ -1,11 +1,6 @@
-/* eslint-disable @typescript-eslint/switch-exhaustiveness-check */
-/* eslint-disable max-depth */
-/* eslint-disable no-await-in-loop */
-import { eq } from 'drizzle-orm';
 import fastifyPlugin from 'fastify-plugin';
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { orders, products } from '@/db/schema.js';
 
 export const productController = fastifyPlugin(async server => {
     // Add schema validator and serializer

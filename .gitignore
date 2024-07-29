@@ -28,3 +28,4 @@ coverage
 
 html/
 *.db
+pnpm-lock.yaml
