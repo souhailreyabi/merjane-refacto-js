@@ -9,7 +9,7 @@
 		"editor.defaultFormatter": "samverschueren.linter-xo"
 	},
 	"[typescript]": {
-		"editor.defaultFormatter": "samverschueren.linter-xo"
+		"editor.defaultFormatter": "vscode.typescript-language-features"
 	},
 	"[typescriptreact]": {
 		"editor.defaultFormatter": "samverschueren.linter-xo"

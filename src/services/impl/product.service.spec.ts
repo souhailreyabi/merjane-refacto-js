@@ -2,12 +2,12 @@ import {
 	describe, it, expect, beforeEach,
 	afterEach,
 } from 'vitest';
-import {mockDeep, type DeepMockProxy} from 'vitest-mock-extended';
-import {type INotificationService} from '../notifications.port.js';
-import {createDatabaseMock, cleanUp} from '../../utils/test-utils/database-tools.ts.js';
-import {ProductService} from './product.service.js';
-import {products, type Product} from '@/db/schema.js';
-import {type Database} from '@/db/type.js';
+import { mockDeep, type DeepMockProxy } from 'vitest-mock-extended';
+import { type INotificationService } from '../notifications.port.js';
+import { createDatabaseMock, cleanUp } from '../../utils/test-utils/database-tools.ts.js';
+import { ProductService } from './product.service.js';
+import { products, type Product } from '@/db/schema.js';
+import { type Database } from '@/db/type.js';
 
 describe('ProductService Tests', () => {
 	let notificationServiceMock: DeepMockProxy<INotificationService>;
@@ -16,10 +16,10 @@ describe('ProductService Tests', () => {
 	let databaseName: string;
 
 	beforeEach(async () => {
-		({databaseMock, databaseName} = await createDatabaseMock());
+		({ databaseMock, databaseName } = await createDatabaseMock());
 		notificationServiceMock = mockDeep<INotificationService>();
 		productService = new ProductService({
-			ns: notificationServiceMock,
+			notificationService: notificationServiceMock,
 			db: databaseMock,
 		});
 	});
@@ -48,7 +48,7 @@ describe('ProductService Tests', () => {
 		expect(product.leadTime).toBe(15);
 		expect(notificationServiceMock.sendDelayNotification).toHaveBeenCalledWith(product.leadTime, product.name);
 		const result = await databaseMock.query.products.findFirst({
-			where: (product, {eq}) => eq(product.id, product.id),
+			where: (product, { eq }) => eq(product.id, product.id),
 		});
 		expect(result).toEqual(product);
 	});
