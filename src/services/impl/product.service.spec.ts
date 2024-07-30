@@ -7,22 +7,43 @@ import { type INotificationService } from '../notifications.port.js';
 import { ProductService } from './product.service.js';
 import { products, type Product } from '@/db/schema.js';
 import { type Database } from '@/db/type.js';
+import { eq } from 'drizzle-orm';
 
-const mockProducts: Product[] = [
-	{
-		id: 1,
-		leadTime: 15,
-		available: 30,
-		type: 'NORMAL',
-		name: 'USB Cable',
-		expiryDate: null,
-		seasonStartDate: null,
-		seasonEndDate: null,
-	},
-];
+const product: Product = {
+	id: 1,
+	leadTime: 15,
+	available: 0,
+	type: 'NORMAL',
+	name: 'USB Cable',
+	expiryDate: null,
+	seasonStartDate: null,
+	seasonEndDate: null,
+};
+const seasonalProduct: Product = {
+	type: 'SEASONAL',
+	available: 1,
+	seasonStartDate: new Date(Date.now() - 1000 * 60 * 60 * 24),
+	seasonEndDate: new Date(Date.now() + 1000 * 60 * 60 * 24),
+	leadTime: 2,
+	id: 2,
+	name: 'SeasonalProduct'
+};
+const expirableProduct: Product = {
+	type: 'EXPIRABLE',
+	available: 1,
+	expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24),
+	leadTime: 2,
+	id: 3,
+	name: 'ExpirableProduct'
+};
+const listOfProducts: Product[] = [product, seasonalProduct, expirableProduct]
+
 describe('ProductService Tests', () => {
 	let notificationServiceMock: DeepMockProxy<INotificationService>;
 	let productService: ProductService;
+	const handleNormalProductMock = vi.fn();
+	const handleSeasonalProductMock = vi.fn();
+	const handleExpiredProductMock = vi.fn();
 	const mockDatabase: Partial<Database> = {
 		update: vi.fn().mockReturnThis(),
 		set: vi.fn().mockReturnThis(),
@@ -41,23 +62,14 @@ describe('ProductService Tests', () => {
 			notificationService: notificationServiceMock,
 			db: mockDatabase as Database,
 		});
-		const product: Product = {
-			id: 1,
-			leadTime: 15,
-			available: 0,
-			type: 'NORMAL',
-			name: 'RJ45 Cable',
-			expiryDate: null,
-			seasonStartDate: null,
-			seasonEndDate: null,
-		};
+		productService.handleNormalProduct = handleNormalProductMock;
+		productService.handleExpiredProduct = handleExpiredProductMock;
+		productService.handleSeasonalProduct = handleSeasonalProductMock;
 
-		// Mock insertion logic
 		(mockDatabase.insert as vi.Mock).mockImplementation(() => ({
 			values: vi.fn().mockResolvedValue(undefined),
 		}));
 
-		// Ensure that the mock database returns the inserted product when queried
 		(mockDatabase.query.products.findFirst as vi.Mock).mockResolvedValue(product);
 
 	});
@@ -67,83 +79,48 @@ describe('ProductService Tests', () => {
 	});
 	it('should handle delay notification correctly', async () => {
 
-		const product: Product = {
-			id: 1,
-			leadTime: 15,
-			available: 0,
-			type: 'NORMAL',
-			name: 'RJ45 Cable',
-			expiryDate: null,
-			seasonStartDate: null,
-			seasonEndDate: null,
-		};
-		// GIVEN
-
 		await mockDatabase.insert(products).values(product);
 
-		// WHEN
 		await productService.notifyDelay(product.leadTime, product);
 
-		// THEN
 		expect(product.available).toBe(0);
 		expect(product.leadTime).toBe(15);
 		expect(notificationServiceMock.sendDelayNotification).toHaveBeenCalledWith(product.leadTime, product.name);
 		const result = await mockDatabase.query.products.findFirst({
-			where: (product, { eq }) => eq(product.id, product.id),
+			where: (product: Product, { eq }) => eq(product.id, product.id),
 		});
 		expect(result).toEqual(product);
 	});
 	it('should update a product successfully', async () => {
-		const product: Product = {
-			id: 1,
-			leadTime: 15,
-			available: 0,
-			type: 'NORMAL',
-			name: 'RJ45 Cable',
-			expiryDate: null,
-			seasonStartDate: null,
-			seasonEndDate: null,
-		};
 
-		// Perform the update operation
+		(mockDatabase.update as vi.Mock).mockReturnValue({
+			set: vi.fn().mockReturnThis(),
+			where: vi.fn().mockReturnThis(),
+		});
 		await productService.updateProduct(product);
 
-		// Retrieve the mock object
-		const updateMock = mockDatabase.update as vi.Mock;
-
-		// Check if update was called
-		expect(updateMock).toHaveBeenCalled();
-		console.log((mockDatabase.update as vi.Mock).mock.calls);
-
-		// Ensure the `set` method is correctly chained and called
-		const setMock = (updateMock() as any).set;
-		const whereMock = (updateMock() as any).where;
-
-		// Assertions
-		expect(setMock).toHaveBeenCalledWith(product);
-		expect(whereMock).toHaveBeenCalledWith({ id: product.id });
+		expect(mockDatabase.update).toHaveBeenCalledWith(products);
+		expect(mockDatabase.update().set).toHaveBeenCalledWith(product);
+		expect(mockDatabase.update().set().where).toHaveBeenCalledWith(eq(products.id, product.id));
 	});
 	it('should handle errors during update', async () => {
 		const error = new Error('Database error');
-		// Mock the database update to reject with an error
 		(mockDatabase.update as vi.Mock).mockImplementation(() => ({
 			set: vi.fn().mockReturnThis(),
 			where: vi.fn().mockRejectedValueOnce(error),
 		}));
 
-		const product: Product = {
-			id: 1,
-			leadTime: 15,
-			available: 30,
-			type: 'NORMAL',
-			name: 'USB Cable',
-			expiryDate: null,
-			seasonStartDate: null,
-			seasonEndDate: null,
-		};
-
 		await expect(productService.updateProduct(product)).rejects.toThrow(`Unable to update product with id ${product.id}`);
 	});
+	it.each([
+		[product, handleNormalProductMock],
+		[seasonalProduct, handleSeasonalProductMock],
+		[expirableProduct, handleExpiredProductMock],
+	])('should call the correct handler for %s type', async (p: Product, expectedHandler: vi.Mock) => {
+		await productService.handleProducts(listOfProducts);
+		expect(expectedHandler).toHaveBeenCalledWith(p);
+	});
+
 });
 
 

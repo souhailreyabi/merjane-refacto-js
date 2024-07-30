@@ -21,24 +21,8 @@ export class ProductService {
 			throw new Error(`Unable to update product with id ${p.id}`);
 		}
 	}
-	public async handleProducts(productList: { product: Product }[]) {
-		for (const { product: p } of productList) {
-			switch (p.type) {
-				case 'NORMAL':
-					await this.handleNormalProduct(p);
-					break;
 
-				case 'SEASONAL':
-					await this.handleSeasonalProduct(p);
-					break;
-
-				case 'EXPIRABLE':
-					await this.handleExpiredProduct(p);
-					break;
-			}
-		}
-	}
-	public async handleNormalProduct(p: Product) {
+	public async handleNormalProduct(p: Product): Promise<void> {
 		if (p.available > 0) {
 			p.available -= 1;
 			await this.updateProduct(p);
@@ -53,7 +37,7 @@ export class ProductService {
 		this.notificationService.sendDelayNotification(leadTime, p.name);
 	}
 
-	public async handleSeasonalProduct(p: Product) {
+	public async handleSeasonalProduct(p: Product): Promise<void> {
 		const currentDate = new Date();
 		if (p.seasonStartDate && p.seasonEndDate &&
 			currentDate > p.seasonStartDate && currentDate < p.seasonEndDate && p.available > 0) {
@@ -82,12 +66,29 @@ export class ProductService {
 		const currentDate = new Date();
 		if (p.available > 0 && p.expiryDate! > currentDate) {
 			p.available -= 1;
-			await this.updateProduct(p);
 		} else {
 			this.notificationService.sendExpirationNotification(p.name, p.expiryDate!);
 			p.available = 0;
-			await this.updateProduct(p);
 
 		}
+		await this.updateProduct(p);
 	}
+	public async handleProducts(productList: Product[]): Promise<void> {
+		for (const p of productList) {
+			switch (p.type) {
+				case 'NORMAL':
+					await this.handleNormalProduct(p);
+					break;
+
+				case 'SEASONAL':
+					await this.handleSeasonalProduct(p);
+					break;
+
+				case 'EXPIRABLE':
+					await this.handleExpiredProduct(p);
+					break;
+			}
+		}
+	}
+
 }

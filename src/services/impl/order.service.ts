@@ -1,8 +1,6 @@
-import { type Cradle } from '@fastify/awilix';
 import { eq } from 'drizzle-orm';
 import { orders, type Order, type Product } from '@/db/schema.js';
 import { type Database } from '@/db/type.js';
-import { promises } from 'dns';
 
 export class OrderService {
     private readonly db: Database;
