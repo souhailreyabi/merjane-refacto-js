@@ -9,6 +9,7 @@ import { products, type Product } from '@/db/schema.js';
 import { type Database } from '@/db/type.js';
 import { eq } from 'drizzle-orm';
 
+
 const product: Product = {
 	id: 1,
 	leadTime: 15,
@@ -26,7 +27,8 @@ const seasonalProduct: Product = {
 	seasonEndDate: new Date(Date.now() + 1000 * 60 * 60 * 24),
 	leadTime: 2,
 	id: 2,
-	name: 'SeasonalProduct'
+	name: 'SeasonalProduct',
+	expiryDate: null
 };
 const expirableProduct: Product = {
 	type: 'EXPIRABLE',
@@ -34,7 +36,9 @@ const expirableProduct: Product = {
 	expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24),
 	leadTime: 2,
 	id: 3,
-	name: 'ExpirableProduct'
+	name: 'ExpirableProduct',
+	seasonStartDate: null,
+	seasonEndDate: null
 };
 const listOfProducts: Product[] = [product, seasonalProduct, expirableProduct]
 
@@ -53,6 +57,7 @@ describe('ProductService Tests', () => {
 		query: {
 			products: {
 				findFirst: vi.fn().mockResolvedValue(null),
+
 			},
 		},
 	};

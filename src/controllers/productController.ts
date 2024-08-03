@@ -14,13 +14,14 @@ export const productController = fastifyPlugin(async server => {
             }),
         },
     }, async (request, reply) => {
-        const ps = server.diContainer.resolve('ps');
+        const orderService = server.diContainer.resolve('orderService');
+        const productService = server.diContainer.resolve('productService');
 
-        const order = ps.getProductsInOrder(request.params.orderId)
-        const { products: productList } = order;
+        const productList = await orderService.getOrderWithProducts(request.params.orderId)
 
-        if (productList.length > 0) ps.handleProducts(productList)
-        await reply.send({ orderId: order.id });
+
+        if (productList.length > 0) productService.handleProducts(productList)
+        await reply.send({ orderId: request.params.orderId });
     });
 });
 

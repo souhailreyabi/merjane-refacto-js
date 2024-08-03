@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { orders, type Order, type Product } from '@/db/schema.js';
+import { orders, type Product } from '@/db/schema.js';
 import { type Database } from '@/db/type.js';
 
 export class OrderService {
@@ -8,8 +8,8 @@ export class OrderService {
     public constructor({ db }: { db: Database }) {
         this.db = db;
     }
-    public async getProductsInOrder(orderId: number): Promise<Product[]> {
-        return await this.db.query.orders
+    public async getOrderWithProducts(orderId: number): Promise<Product[]> {
+        const order = await this.db.query.orders
             .findFirst({
                 where: eq(orders.id, orderId),
                 with: {
@@ -21,7 +21,12 @@ export class OrderService {
                     },
                 },
             })!;
+        if (!order) {
+            throw new Error(`Order with ID ${orderId} not found`);
+        }
 
+        const productList = order.products.map((orderProducts: any) => orderProducts.product);
+        return productList;
 
     }
 
